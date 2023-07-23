@@ -1,0 +1,16 @@
+{
+  "name": "email",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "email handler for sripaal shirts co",
+  "main": "email.js",
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.8.0",
+    "helmet": "^7.0.0",
+    "sqlite3": "^5.1.6"
+  }
+}
