@@ -18,8 +18,8 @@ const limiter = rateLimit({});
 const db = new sqlite3.Database('./db/emails.db');
 const email = nodemailer.createTransport({
   host: 'localhost',
-  port: 465,
-  secure: true,
+  port: 25,
+  tls: {rejectUnauthorized: false},
   auth: {user: process.env.EMAIL_ADDRESS, pass: process.env.EMAIL_PASSWORD}
 });
 
