@@ -8,6 +8,8 @@ import sqlite3 from 'sqlite3';
 const TOKEN_LENGTH = 16;
 const PORT = 8080;
 
+const emailRegex =
+    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const app = express();
 const limiter = rateLimit({});
 const db = new sqlite3.Database('./db/emails.db');
@@ -19,7 +21,7 @@ app.use(limiter);
 app.set('trust proxy', 1);
 
 db.run(
-    'CREATE TABLE IF NOT EXISTS emails(email TEXT UNIQUE NOT NULL,verified BOOLEAN DEFAULT 0,token TEXT UNIQUE NOT NULL)');
+    'CREATE TABLE IF NOT EXISTS emails(email TEXT UNIQUE NOT NULL,verified BOOLEAN DEFAULT 0,token TEXT UNIQUE NOT NULL,unsubscribed BOOLEAN DEFAULT 0)');
 
 const id = function() {
   return crypto.randomBytes(TOKEN_LENGTH).toString('hex');
@@ -28,22 +30,14 @@ const id = function() {
 // /api/verify?email=EMAIL&token=TOKEN
 app.get('/api/verify', function(req, res) {
   const errorPage = './email-error.html';
-  console.log(req.query);
-  if (!req.query) {
-    console.log('No body provided');
+  const successPage = './email-verified.html';
+
+  if (!req.query?.email || !req.query?.token) {
     res.sendFile(errorPage);
     return;
   }
-  if (!req.query.email || !req.query.token) {
-    console.log('No email or token provided');
-    res.sendFile(errorPage);
-    return;
-  }
-  if (!RegExp(
-           /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/)
-           .exec(String(req.query.email).toLowerCase()) ||
+  if (!RegExp(emailRegex).exec(String(req.query.email).toLowerCase()) ||
       !RegExp(/^([A-F0-9]{32})$/).exec(String(req.query.token).toUpperCase())) {
-    console.log('Invalid email address or token');
     res.sendFile(errorPage);
     return;
   }
@@ -51,51 +45,55 @@ app.get('/api/verify', function(req, res) {
     db.run(
         'UPDATE emails SET verified = ? WHERE email = ? AND token = ?',
         [1, req.query.email, req.query.token], function(err) {
-          if (err) {
-            console.log(err.message);
-            res.sendFile(errorPage);
-          } else {
-            console.log(
-                `Email "${req.query.email}" has been verified successfully.'`);
-            res.sendFile('./email-verified.html');
-          }
+          res.sendFile(err ? errorPage : successPage);
         });
   });
 });
-app.post('/api/email', function(req, res) {
-  console.log(req.body);
-  if (!req.body) {
-    console.log('No body provided');
+
+// /api/subscribe
+// {subscriber_email: EMAIL}
+app.post('/api/subscribe', function(req, res) {
+  if (!req.body?.subscriber_email) {
     res.json({message: 'error'});
     return;
   }
-  if (!req.body.subscriber_email) {
-    console.log('No email provided');
-    res.json({message: 'error'});
-    return;
-  }
-  if (!RegExp(
-           /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/)
+  if (!RegExp(emailRegex)
            .exec(String(req.body.subscriber_email).toLowerCase())) {
-    console.log('Invalid email address');
     res.json({message: 'error'});
     return;
   }
   db.serialize(() => {
     db.run(
-        'INSERT INTO emails(email,verified,token) VALUES(?,?,?)',
-        [req.body.subscriber_email, 0, id()], function(err) {
-          if (err) {
-            console.log(err.message);
-            res.json({message: 'error'});
-          } else {
-            console.log(`New email has been added "${
-                req.body.subscriber_email}" into the database.'`);
-            res.json({message: 'success'});
-          }
+        'INSERT INTO emails(email,verified,token,unsubscribed) VALUES(?,?,?,?)',
+        [req.body.subscriber_email, 0, id(), 0], function(err) {
+          res.json({message: err ? 'error' : 'success'});
         });
   });
 });
+
+// /api/unsubscribe?email=EMAIL&token=TOKEN
+app.get('/api/unsubscribe', function(req, res) {
+  const errorPage = './email-error.html';
+  const successPage = './email-unsubscribed.html';
+
+  if (!req.query?.email || !req.query?.token) {
+    res.sendFile(errorPage);
+    return;
+  }
+  if (!RegExp().exec(String(req.query.email).toLowerCase()) ||
+      !RegExp(/^([A-F0-9]{32})$/).exec(String(req.query.token).toUpperCase())) {
+    res.sendFile(errorPage);
+    return;
+  }
+  db.serialize(() => {
+    db.run(
+        'UPDATE emails SET unsubscribed = ? WHERE email = ? AND token = ?',
+        [1, req.query.email, req.query.token], function(err) {
+          res.sendFile(err ? errorPage : successPage);
+        });
+  });
+});
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
