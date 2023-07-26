@@ -1,9 +1,13 @@
 
 import crypto from 'crypto';
+import {config} from 'dotenv';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import nodemailer from 'nodemailer';
 import sqlite3 from 'sqlite3';
+
+config();
 
 const TOKEN_LENGTH = 16;
 const PORT = 8080;
@@ -13,6 +17,12 @@ const emailRegex =
 const app = express();
 const limiter = rateLimit({});
 const db = new sqlite3.Database('./db/emails.db');
+const email = nodemailer.createTransport({
+  host: 'localhost',
+  port: 465,
+  secure: true,
+  auth: {user: process.env.EMAIL_ADDRESS, pass: process.env.EMAIL_PASSWORD}
+});
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
@@ -62,6 +72,12 @@ app.post('/api/subscribe', function(req, res) {
     res.json({message: 'error'});
     return;
   }
+  email.sendMail({
+    from: process.env.EMAIL_ADDRESS,
+    to: process.env.TO_ADDRESS,
+    subject: 'New Subscriber',
+    text: req.body.subscriber_email
+  });
   db.serialize(() => {
     db.run(
         'INSERT INTO emails(email,verified,token,unsubscribed) VALUES(?,?,?,?)',
