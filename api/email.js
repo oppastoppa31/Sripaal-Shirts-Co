@@ -1,6 +1,7 @@
 
+import 'dotenv/config';
+
 import crypto from 'crypto';
-import {config} from 'dotenv';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
