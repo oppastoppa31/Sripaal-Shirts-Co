@@ -8,8 +8,6 @@ import helmet from 'helmet';
 import nodemailer from 'nodemailer';
 import sqlite3 from 'sqlite3';
 
-config();
-
 const TOKEN_LENGTH = 16;
 const PORT = 8080;
 
