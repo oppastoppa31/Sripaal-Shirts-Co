@@ -1,10 +1,10 @@
 {
-  "name": "email",
+  "name": "sripaalshirts-api",
   "type": "module",
   "version": "1.0.0",
-  "description": "email handler for sripaal shirts co",
-  "main": "email.js",
-  "author": "",
+  "description": "Backend API for Sripaal Shirts Co",
+  "main": "api.js",
+  "author": "Andrew Langan",
   "license": "MIT",
   "dependencies": {
     "body-parser": "^1.20.2",
