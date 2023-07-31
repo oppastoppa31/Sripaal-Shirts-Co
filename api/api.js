@@ -125,8 +125,7 @@ app.post('/api/contact', multer().single('image'), function(req, res) {
     res.json({message: 'error'});
     return;
   }
-  if (req.file?.size > FILE_LIMIT ||
-      !RegExp(imageRegex).exec(String(req.file?.buffer.toString('base64')))) {
+  if (req.file?.size > FILE_LIMIT || !req.file?.mimetype?.startsWith('image')) {
     res.json({message: 'error'});
     return;
   }
@@ -140,6 +139,7 @@ app.post('/api/contact', multer().single('image'), function(req, res) {
         [{filename: req.file.originalname, content: req.file.buffer}] :
         []
   });
+  res.json({message: 'success'});
 });
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
