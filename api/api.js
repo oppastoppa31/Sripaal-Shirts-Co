@@ -140,13 +140,6 @@ app.post('/api/contact', multer().single('image'), function(req, res) {
         [{filename: req.file.originalname, content: req.file.buffer}] :
         []
   });
-  db.serialize(() => {
-    db.run(
-        'INSERT INTO emails(email,verified,token,unsubscribed) VALUES(?,?,?,?)',
-        [req.body.subscriber_email, 0, id(), 0], function(err) {
-          res.json({message: err ? 'error' : 'success'});
-        });
-  });
 });
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
