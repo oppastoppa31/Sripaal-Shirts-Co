@@ -5,16 +5,18 @@ import crypto from 'crypto';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import multer from 'multer';
 import nodemailer from 'nodemailer';
 import sqlite3 from 'sqlite3';
 
 const TOKEN_LENGTH = 16;
-const PORT = 3000;
+const PORT = 8080;
+const FILE_LIMIT = 16000000;
 
 const emailRegex =
     /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const imageRegex =
-    /^data:image\/(?:gif|png|jpeg|bmp|webp)(?:;charset=utf-8)?;base64,(?:R0lG|iVBORw0KGg|Qk[0-3]|UklGR.{6}XRUJQ)(?:[A-Za-z0-9]|[+/])+={0,2}/;
+    /^(?:R0lG|iVBORw0KGg|Qk[0-3]|UklGR.{6}XRUJQ)(?:[A-Za-z0-9]|[+/])+={0,2}/;
 const app = express();
 const limiter = rateLimit({});
 const db = new sqlite3.Database('./db/emails.db');
@@ -112,10 +114,8 @@ app.get('/api/unsubscribe', function(req, res) {
 });
 
 // /api/contact
-// {name: "Name", email: "Email", message: "Message",filename: "Filename",
-// image: "Image/base64"}
-app.post('/api/contact', function(req, res) {
-  console.log(req.body);
+// {name: "Name", email: "Email", message: "Message"}
+app.post('/api/contact', multer().single('image'), function(req, res) {
   if (!req.body?.name || !req.body?.email || !req.body?.message) {
     res.json({message: 'error'});
     return;
@@ -125,7 +125,8 @@ app.post('/api/contact', function(req, res) {
     res.json({message: 'error'});
     return;
   }
-  if (req.body.image && !RegExp(imageRegex).exec(String(req.body.image))) {
+  if (req.file?.size > FILE_LIMIT ||
+      !RegExp(imageRegex).exec(String(req.file?.buffer.toString('base64')))) {
     res.json({message: 'error'});
     return;
   }
@@ -135,8 +136,8 @@ app.post('/api/contact', function(req, res) {
     subject: `New Message from ${req.body.email}`,
     text: `${req.body.name} (${req.body.email}) sent you a message: ${
         req.body.message}`,
-    attachments: req.body.image ?
-        [{filename: req.body.filename, content: req.body.image}] :
+    attachments: req.file ?
+        [{filename: req.file.originalname, content: req.file.buffer}] :
         []
   });
   db.serialize(() => {
