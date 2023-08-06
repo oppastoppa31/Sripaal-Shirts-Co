@@ -144,7 +144,6 @@ app.post('/api/contact', multer().single('image'), (req, res) => {
 // /api/vpn
 // {ip: "IP", signature: "Signature"}
 app.post('/api/vpn', async (req, res) => {
-  console.log(req.body);
   const signer = crypto.createVerify('sha3-512');
   const publicKey = fs.readFileSync('./keys/public.pem', 'utf8');
 
