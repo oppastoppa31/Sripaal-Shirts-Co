@@ -144,6 +144,7 @@ app.post('/api/contact', multer().single('image'), (req, res) => {
 // /api/vpn
 // {ip: "IP", signature: "Signature"}
 app.post('/api/vpn', async (req, res) => {
+  console.log(req.body);
   const signer = crypto.createVerify('sha3-512');
   const publicKey = fs.readFileSync('./keys/public.pem', 'utf8');
 
@@ -153,11 +154,7 @@ app.post('/api/vpn', async (req, res) => {
   }
   if (!RegExp(/^([0-9]{1,3}\.){3}[0-9]{1,3}$/)
     .exec(String(req.body.ip).toLowerCase()) ||
-    !RegExp(/^([A-F0-9]{144})$/).exec(String(req.body.signature).toUpperCase())) {
-    res.json({ message: 'error' });
-    return;
-  }
-  if (req.body.ip !== req.socket.remoteAddress) {
+    !RegExp(/^([A-F0-9]{140,144})$/).exec(String(req.body.signature).toUpperCase())) {
     res.json({ message: 'error' });
     return;
   }
@@ -183,7 +180,7 @@ app.post('/api/vpn', async (req, res) => {
     };
     const request = https.request(options, d => {
       let data = '';
-      d.on('data', (chunk) => {
+      d.on('data', chunk => {
         data += chunk;
       });
       d.on('end', () => {
@@ -195,6 +192,9 @@ app.post('/api/vpn', async (req, res) => {
         }
         resolve(0);
       });
+    });
+    request.on('error', _ => {
+      res.json({ message: 'error' });
     });
     request.end();
   });
@@ -223,6 +223,9 @@ app.post('/api/vpn', async (req, res) => {
           resolve(data.domain_record.data === req.body.ip);
         });
       });
+      request.on('error', _ => {
+        res.json({ message: 'error' });
+      });
       request.end();
     });
 
@@ -243,6 +246,9 @@ app.post('/api/vpn', async (req, res) => {
         data: req.body.ip
       });
       const request = https.request(options, _ => { });
+      request.on('error', _ => {
+        res.json({ message: 'error' });
+      });
       request.write(patchData);
       request.end();
     }
@@ -272,9 +278,13 @@ app.post('/api/vpn', async (req, res) => {
       tag: null
     });
     const request = https.request(options, _ => { });
+    request.on('error', _ => {
+      res.json({ message: 'error' });
+    });
     request.write(postData);
     request.end();
   }
+  res.json({ message: 'success' });
 });
 
 app.listen(PORT, () => {
