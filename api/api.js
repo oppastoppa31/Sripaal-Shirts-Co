@@ -184,7 +184,7 @@ app.post('/api/vpn', async (req, res) => {
       });
       d.on('end', () => {
         data = JSON.parse(data);
-        for (const record in data.domain_records) {
+        for (const record of data.domain_records) {
           if (record.name === 'vpn') {
             resolve(record.id);
           }
